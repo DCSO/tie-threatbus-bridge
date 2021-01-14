@@ -1,0 +1,34 @@
+# Collectors settings
+# -------------------
+collectors:
+  tie:
+    # Set to true to enable this collector
+    enable: true
+    # TIE API version. Currently: 1
+    api-version: 1
+    # Base URL for the DCSO TIE service
+    baseurl: https://tie.dcso.de/api/v1/iocs
+    # TIE token for the API
+    token:
+    # Categories to select IoCs for
+    categories:
+      - c2-server
+      - espionage
+    # Indicator types to be selected from the TIE
+    data-types:
+      - DomainName
+      - URLVerbatim
+    # Update since constraint
+    update-since: 4h
+    # Severity range to search for. Both ends need to be specified
+    # (range 0-6)
+    severity:
+      from: 1
+      to: 5
+    chunk-size: 100
+
+# Threat Bus ZeroMQ connection settings
+# -------------------------------------
+threatbus:
+  host: 127.0.0.1
+  port: 13372
