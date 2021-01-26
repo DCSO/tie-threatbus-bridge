@@ -89,6 +89,8 @@ func main() {
 		log.SetLevel(log.DebugLevel)
 	}
 
+	log.SetFormatter(UTCFormatter{&log.JSONFormatter{}})
+
 	yamlFile, err := ioutil.ReadFile(*configFilename)
 	if err != nil {
 		log.Fatal(err)
