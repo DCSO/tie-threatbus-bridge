@@ -1,5 +1,5 @@
 // tie-threatbus-bridge
-// Copyright (c) 2020, DCSO GmbH
+// Copyright (c) 2020, 2021 DCSO GmbH
 
 package main
 
@@ -22,15 +22,22 @@ import (
 var (
 	tc       Collector
 	updating bool
+	count    uint64
 	socket   *zmq.Socket
 )
 
 func update(iocChan chan IOC) {
 	defer func() {
-		log.Info("Update finished")
+		log.WithFields(log.Fields{
+			"domain":         "metrics",
+			"iocs-processed": count,
+		}).Info("update done")
 		updating = false
 	}()
-	log.Info("Updating")
+	count = 0
+	log.WithFields(log.Fields{
+		"domain": "status",
+	}).Info("update started")
 	tc.Fetch(iocChan)
 }
 
@@ -67,11 +74,15 @@ func sendZMQ(ioc *IOC) error {
 	}
 	msg := fmt.Sprintf("threatbus/intel %s", string(j))
 	i, err := socket.Send(msg, 0)
-	log.Debug("Sending ", msg)
+	log.WithFields(log.Fields{
+		"domain": "status",
+	}).Debug("sending ", msg)
 	if err != nil {
 		return err
 	}
-	log.Debug(i, " sent")
+	log.WithFields(log.Fields{
+		"domain": "status",
+	}).Debug(i, " bytes sent")
 
 	return nil
 }
@@ -106,6 +117,7 @@ func main() {
 			if err != nil {
 				log.Error(err)
 			}
+			count++
 		}
 	}(iocChan)
 
@@ -128,7 +140,9 @@ func main() {
 		for sig := range c {
 			log.Debug(sig)
 			if sig == syscall.SIGTERM || sig == syscall.SIGINT {
-				log.Info("Shutting down")
+				log.WithFields(log.Fields{
+					"domain": "status",
+				}).Info("shutting down")
 				if socket != nil {
 					socket.Close()
 				}
@@ -138,7 +152,9 @@ func main() {
 					updating = true
 					go update(iocChan)
 				} else {
-					log.Info("Update in progress")
+					log.WithFields(log.Fields{
+						"domain": "status",
+					}).Error("update in progress")
 				}
 			}
 		}
