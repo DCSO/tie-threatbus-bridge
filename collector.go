@@ -16,18 +16,19 @@ import (
 )
 
 type TIECollectorConfig struct {
-	URL         string        `yaml:"baseurl"`
-	Enable      bool          `yaml:"enable"`
-	APIVersion  int           `yaml:"api-version"`
-	Token       string        `yaml:"token"`
-	Categories  []string      `yaml:"categories"`
-	DataTypes   []string      `yaml:"data-types"`
-	UpdateSince time.Duration `yaml:"update-since"`
-	ChunkSize   int           `yaml:"chunk-size"`
-	Severity    struct {
+	URL           string        `yaml:"baseurl"`
+	Enable        bool          `yaml:"enable"`
+	APIVersion    int           `yaml:"api-version"`
+	Token         string        `yaml:"token"`
+	Categories    []string      `yaml:"categories"`
+	DataTypes     []string      `yaml:"data-types"`
+	Since         time.Duration `yaml:"since"`
+	TimeQueryName string        `yaml:"time-query-name"`
+	ChunkSize     int           `yaml:"chunk-size"`
+	Severity      struct {
 		From int `yaml:"from"`
 		To   int `yaml:"to"`
-	} `yaml:"severity"`
+	}                           `yaml:"severity"`
 }
 
 type TIECollector struct {
@@ -87,7 +88,7 @@ func queryAllTIE(u *url.URL) url.Values {
 	if len(Config.Collectors.TIE.DataTypes) > 0 {
 		q.Add("data_type", strings.Join(Config.Collectors.TIE.DataTypes, ","))
 	}
-	q.Add("updated_at_since", time.Now().Add(-Config.Collectors.TIE.UpdateSince).Format("2006-01-02T15:04:05.000000Z"))
+	q.Add(Config.Collectors.TIE.TimeQueryName, time.Now().Add(-Config.Collectors.TIE.Since).Format("2006-01-02T15:04:05.000000Z"))
 	q.Add("severity", fmt.Sprintf("%d-%d", Config.Collectors.TIE.Severity.From,
 		Config.Collectors.TIE.Severity.To))
 	log.Debug(q)

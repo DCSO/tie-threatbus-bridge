@@ -18,8 +18,10 @@ collectors:
     data-types:
       - DomainName
       - URLVerbatim
-    # Update since constraint
-    update-since: 4h
+    # Time selection constraint
+    since: 4h
+    # Query name, e.g. "updated_at_since", "created_at_since", "first_seen_since"
+    time-query-name: created_at_since
     # Severity range to search for. Both ends need to be specified
     # (range 0-6)
     severity:
