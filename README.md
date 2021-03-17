@@ -68,6 +68,8 @@ collectors:
 threatbus:
   host: 1.0.0.1
   port: 13372
+
+logfile: /var/log/tie-threatbus-bridge.log
 ```
 
 ## Operation

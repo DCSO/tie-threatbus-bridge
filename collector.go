@@ -28,7 +28,7 @@ type TIECollectorConfig struct {
 	Severity      struct {
 		From int `yaml:"from"`
 		To   int `yaml:"to"`
-	}                           `yaml:"severity"`
+	} `yaml:"severity"`
 }
 
 type TIECollector struct {
@@ -95,11 +95,12 @@ func queryAllTIE(u *url.URL) url.Values {
 	return q
 }
 
-func (m *TIECollector) getIOCForQuery(query queryFunc, outChan chan IOC) error {
+func (m *TIECollector) getIOCForQuery(query queryFunc, outChan chan IOC) (uint64, error) {
 	offset := 0
 	limit := Config.Collectors.TIE.ChunkSize
 	retryCount := 0
 	url := Config.Collectors.TIE.URL
+	iocCount := uint64(0)
 
 	filterOutCategories := map[string]bool{
 		"sinkhole":                 true,
@@ -109,7 +110,7 @@ func (m *TIECollector) getIOCForQuery(query queryFunc, outChan chan IOC) error {
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return err
+		return iocCount, err
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", Config.Collectors.TIE.Token))
 	q := query(req.URL)
@@ -123,7 +124,7 @@ func (m *TIECollector) getIOCForQuery(query queryFunc, outChan chan IOC) error {
 		client := &http.Client{}
 		resp, err := client.Do(req)
 		if err != nil {
-			return err
+			return iocCount, err
 		}
 		defer resp.Body.Close()
 		var qryRes IOCQueryStruct
@@ -146,6 +147,7 @@ func (m *TIECollector) getIOCForQuery(query queryFunc, outChan chan IOC) error {
 					}
 				}
 				if keep {
+					iocCount++
 					outChan <- val
 				}
 			}
@@ -183,7 +185,7 @@ func (m *TIECollector) getIOCForQuery(query queryFunc, outChan chan IOC) error {
 		}
 
 	}
-	return nil
+	return iocCount, nil
 }
 
 func (m *TIECollector) Name() string {
@@ -194,8 +196,8 @@ func (m *TIECollector) Configure() error {
 	return nil
 }
 
-func (m *TIECollector) Fetch(out chan IOC) error {
+func (m *TIECollector) Fetch(out chan IOC) (uint64, error) {
 	log.Debug(Config)
-	err := m.getIOCForQuery(queryAllTIE, out)
-	return err
+	cnt, err := m.getIOCForQuery(queryAllTIE, out)
+	return cnt, err
 }

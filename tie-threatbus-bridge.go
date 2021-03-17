@@ -28,17 +28,20 @@ var (
 
 func update(iocChan chan IOC) {
 	defer func() {
-		log.WithFields(log.Fields{
-			"domain":         "metrics",
-			"iocs-processed": count,
-		}).Info("update done")
 		updating = false
 	}()
 	count = 0
 	log.WithFields(log.Fields{
 		"domain": "status",
 	}).Info("update started")
-	tc.Fetch(iocChan)
+	count, err := tc.Fetch(iocChan)
+	if err != nil {
+		log.Error(err)
+	}
+	log.WithFields(log.Fields{
+		"domain":         "metrics",
+		"iocs-processed": count,
+	}).Info("update done")
 }
 
 type IOCJSON struct {
@@ -100,8 +103,6 @@ func main() {
 		log.SetLevel(log.DebugLevel)
 	}
 
-	log.SetFormatter(UTCFormatter{&log.JSONFormatter{}})
-
 	yamlFile, err := ioutil.ReadFile(*configFilename)
 	if err != nil {
 		log.Fatal(err)
@@ -111,13 +112,25 @@ func main() {
 		log.Fatal(err)
 	}
 
+	if len(Config.Logfile) > 0 {
+		log.Infof("Switching to log file %s", Config.Logfile)
+		file, err := os.OpenFile(Config.Logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0640)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer file.Close()
+		log.SetFormatter(UTCFormatter{&log.JSONFormatter{}})
+		log.SetOutput(file)
+	} else {
+		log.SetFormatter(UTCFormatter{&log.JSONFormatter{}})
+	}
+
 	go func(myIocChan chan IOC) {
 		for ioc := range myIocChan {
 			err := sendZMQ(&ioc)
 			if err != nil {
 				log.Error(err)
 			}
-			count++
 		}
 	}(iocChan)
 
