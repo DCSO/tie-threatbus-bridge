@@ -6,6 +6,14 @@ It can be used to regularly query the TIE API and publishes new IOCs to
 ThreatBus. This is necessary since TIE does not have a push hook to use
 for that purpose.
 
+## Dependencies
+
+We need libzmq for ZeroMQ communication to Threat Bus.
+
+```
+$ sudo apt install libzmq3-dev
+```
+
 ## Building
 
 ```
