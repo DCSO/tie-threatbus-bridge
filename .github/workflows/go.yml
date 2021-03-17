@@ -21,7 +21,7 @@ jobs:
     - name: Get dependencies
       run: |
         go get -v -t -d ./...
-        apt-get install -y libzmq3-dev
+        sudo apt-get install -y libzmq3-dev
 
         if [ -f Gopkg.toml ]; then
             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
