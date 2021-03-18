@@ -10,6 +10,7 @@ import (
 )
 
 func TestIOCConverterLegacyDomain(t *testing.T) {
+	// {"ts":"2021-03-18T19:29:31.555292569+01:00","id":"intel_c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2","data":{"indicator":["foobar"],"intel_type":11},"operation":"ADD"}
 	c := MakeIOCConverterLegacy()
 	ioc := MakeIOC("foobar", "DomainName")
 	v, err := c.FromIOC(&ioc)
@@ -27,6 +28,7 @@ func TestIOCConverterLegacyDomain(t *testing.T) {
 }
 
 func TestIOCConverterLegacyURL(t *testing.T) {
+	// {"ts":"2021-03-18T19:31:59.751183469+01:00","id":"intel_c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2","data":{"indicator":["foobar"],"intel_type":13},"operation":"ADD"}
 	c := MakeIOCConverterLegacy()
 	ioc := MakeIOC("foobar", "URLVerbatim")
 	v, err := c.FromIOC(&ioc)
