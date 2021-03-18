@@ -17,6 +17,7 @@ type Collector interface {
 }
 
 type ThreatBusConfig struct {
-	Host string
-	Port int
+	Host   string
+	Port   int
+	Format string
 }
