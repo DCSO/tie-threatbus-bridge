@@ -28,7 +28,6 @@ Usage of ./tie-threatbus-bridge:
     	configuration file (default "config.yaml")
   -verbose
     	be verbose
-
 ```
 
 Example:
@@ -76,6 +75,8 @@ collectors:
 threatbus:
   host: 1.0.0.1
   port: 13372
+  # legacy or stix2
+  format: legacy
 
 logfile: /var/log/tie-threatbus-bridge.log
 ```
