@@ -4,8 +4,6 @@
 package main
 
 import (
-	"crypto/sha256"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -22,7 +20,6 @@ import (
 var (
 	tc       Collector
 	updating bool
-	count    uint64
 	socket   *zmq.Socket
 )
 
@@ -30,7 +27,6 @@ func update(iocChan chan IOC) {
 	defer func() {
 		updating = false
 	}()
-	count = 0
 	log.WithFields(log.Fields{
 		"domain": "status",
 	}).Info("update started")
@@ -54,28 +50,12 @@ type IOCJSON struct {
 	Operation string `json:"operation"`
 }
 
-func sendZMQ(ioc *IOC) error {
-	tbIOCType := mapTIEtoThreatBus(ioc.DataType)
-	if tbIOCType < 0 {
-		return fmt.Errorf("invalid data type: %s", ioc.DataType)
-	}
-	iocJSON := IOCJSON{
-		TS: time.Now(),
-		ID: fmt.Sprintf("intel_%x", sha256.Sum256([]byte(ioc.Value))),
-		Data: struct {
-			Indicator []string `json:"indicator"`
-			IntelType int      `json:"intel_type"`
-		}{
-			Indicator: []string{ioc.Value},
-			IntelType: tbIOCType,
-		},
-		Operation: "ADD",
-	}
-	j, err := json.Marshal(iocJSON)
+func sendZMQ(ioc *IOC, conv IOCConverter) error {
+	j, err := conv.FromIOC(ioc)
 	if err != nil {
 		return err
 	}
-	msg := fmt.Sprintf("threatbus/intel %s", string(j))
+	msg := fmt.Sprintf("%s %s", conv.Topic(), string(j))
 	i, err := socket.Send(msg, 0)
 	log.WithFields(log.Fields{
 		"domain": "status",
@@ -112,6 +92,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	conv, err := MakeIOCConverter(Config.ThreatBusConfig.Format)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	if len(Config.Logfile) > 0 {
 		log.Infof("Switching to log file %s", Config.Logfile)
 		file, err := os.OpenFile(Config.Logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0640)
@@ -127,7 +112,7 @@ func main() {
 
 	go func(myIocChan chan IOC) {
 		for ioc := range myIocChan {
-			err := sendZMQ(&ioc)
+			err := sendZMQ(&ioc, conv)
 			if err != nil {
 				log.Error(err)
 			}

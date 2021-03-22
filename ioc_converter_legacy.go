@@ -1,7 +1,14 @@
 // tie-threatbus-bridge
-// Copyright (c) 2020, DCSO GmbH
+// Copyright (c) 2021, DCSO GmbH
 
 package main
+
+import (
+	"crypto/sha256"
+	"encoding/json"
+	"fmt"
+	"time"
+)
 
 // taken from ThreatBus code, starts with 1
 const (
@@ -74,8 +81,42 @@ func mapTIEtoThreatBus(iocType string) int {
 	case "FileName":
 		return FILENAME
 	case "EMail":
-		return EMAILSRC // TODO what to do with this? IPDST?
+		return EMAILSRC // TODO what to do with this? EMAILDST?
 	default:
 		return -1
 	}
+}
+
+type IOCConverterLegacy struct{}
+
+func MakeIOCConverterLegacy() *IOCConverterLegacy {
+	return &IOCConverterLegacy{}
+}
+
+func (c *IOCConverterLegacy) Topic() string {
+	return "threatbus/intel"
+}
+
+func (c *IOCConverterLegacy) FromIOC(ioc *IOC) ([]byte, error) {
+	tbIOCType := mapTIEtoThreatBus(ioc.DataType)
+	if tbIOCType < 0 {
+		return nil, fmt.Errorf("unsupported data type: %s", ioc.DataType)
+	}
+	iocJSON := IOCJSON{
+		TS: time.Now(),
+		ID: fmt.Sprintf("intel_%x", sha256.Sum256([]byte(ioc.Value))),
+		Data: struct {
+			Indicator []string `json:"indicator"`
+			IntelType int      `json:"intel_type"`
+		}{
+			Indicator: []string{ioc.Value},
+			IntelType: tbIOCType,
+		},
+		Operation: "ADD",
+	}
+	data, err := json.Marshal(iocJSON)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
