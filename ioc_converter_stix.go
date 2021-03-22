@@ -11,22 +11,22 @@ import (
 	"github.com/TcM1911/stix2"
 )
 
-func mapTIEtoSTIX2(iocType string) string {
+func mapTIEtoSTIX2(iocType string) (string, error) {
 	switch iocType {
 	case "DomainName":
-		return "[domain-name:value = '%s']"
+		return "[domain-name:value = '%s']", nil
 	case "URLVerbatim":
-		return "[url:value = '%s']"
+		return "[url:value = '%s']", nil
 	case "IPv4":
-		return "[ipv4-addr:value = '%s']"
+		return "[ipv4-addr:value = '%s']", nil
 	case "IPv6":
-		return "[ipv6-addr:value = '%s']"
+		return "[ipv6-addr:value = '%s']", nil
 	case "FileName":
-		return "[file:name = '%s']"
+		return "[file:name = '%s']", nil
 	case "EMail":
-		return "[email-addr:value = '%s']"
+		return "[email-addr:value = '%s']", nil
 	default:
-		return ""
+		return "", fmt.Errorf("unsupported data type: %s", iocType)
 	}
 }
 
@@ -41,9 +41,9 @@ func (c *IOCConverterSTIX2) Topic() string {
 }
 
 func (c *IOCConverterSTIX2) FromIOC(ioc *IOC) ([]byte, error) {
-	t := mapTIEtoSTIX2(ioc.DataType)
-	if t == "" {
-		return nil, fmt.Errorf("unsupported data type: %s", ioc.DataType)
+	t, err := mapTIEtoSTIX2(ioc.DataType)
+	if err != nil {
+		return nil, err
 	}
 	tsNow := &stix2.Timestamp{
 		Time: time.Now().UTC(),
