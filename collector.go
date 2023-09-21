@@ -1,5 +1,5 @@
 // tie-threatbus-bridge
-// Copyright (c) 2020, DCSO GmbH
+// Copyright (c) 2020, 2023, DCSO GmbH
 
 package main
 
@@ -29,6 +29,9 @@ type TIECollectorConfig struct {
 		From int `yaml:"from"`
 		To   int `yaml:"to"`
 	} `yaml:"severity"`
+	Limit struct {
+		Total uint64 `yaml:"total"`
+	} `yaml:"limit"`
 }
 
 type TIECollector struct {
@@ -95,7 +98,7 @@ func queryAllTIE(u *url.URL) url.Values {
 	return q
 }
 
-func (m *TIECollector) getIOCForQuery(query queryFunc, outChan chan IOC) (uint64, error) {
+func (m *TIECollector) getIOCForQuery(query queryFunc, outChan chan IOC) (uint64, uint64, error) {
 	offset := 0
 	limit := Config.Collectors.TIE.ChunkSize
 	retryCount := 0
@@ -110,7 +113,7 @@ func (m *TIECollector) getIOCForQuery(query queryFunc, outChan chan IOC) (uint64
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return iocCount, err
+		return iocCount, 0, err
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", Config.Collectors.TIE.Token))
 	q := query(req.URL)
@@ -119,12 +122,13 @@ func (m *TIECollector) getIOCForQuery(query queryFunc, outChan chan IOC) (uint64
 	q.Add("order_by", "seq")
 	req.URL.RawQuery = q.Encode()
 
+	buf := make(map[string][]IOC)
 	for {
 		log.Debugf("TIE: requesting %v", req.URL)
 		client := &http.Client{}
 		resp, err := client.Do(req)
 		if err != nil {
-			return iocCount, err
+			return iocCount, 0, err
 		}
 		defer resp.Body.Close()
 		var qryRes IOCQueryStruct
@@ -137,7 +141,6 @@ func (m *TIECollector) getIOCForQuery(query queryFunc, outChan chan IOC) (uint64
 			if err != nil {
 				log.Errorf("error decoding JSON: %s", err.Error())
 			}
-
 			for _, val := range qryRes.Iocs {
 				keep := true
 				for _, c := range val.Categories {
@@ -147,11 +150,13 @@ func (m *TIECollector) getIOCForQuery(query queryFunc, outChan chan IOC) (uint64
 					}
 				}
 				if keep {
+					if _, ok := buf[val.DataType]; !ok {
+						buf[val.DataType] = make([]IOC, 0)
+					}
 					iocCount++
-					outChan <- val
+					buf[val.DataType] = append(buf[val.DataType], val)
 				}
 			}
-
 			if !qryRes.HasMore {
 				log.Debug("no more data")
 				break
@@ -183,9 +188,43 @@ func (m *TIECollector) getIOCForQuery(query queryFunc, outChan chan IOC) (uint64
 				break
 			}
 		}
-
 	}
-	return iocCount, nil
+
+	var i uint64
+	// process types defined in configuration first, in given order
+	for _, t := range Config.Collectors.TIE.DataTypes {
+		if vals, ok := buf[t]; ok {
+			for _, val := range vals {
+				if Config.Collectors.TIE.Limit.Total == 0 || i < Config.Collectors.TIE.Limit.Total {
+					outChan <- val
+					i++
+				} else {
+					break
+				}
+			}
+		}
+	}
+	// process all others
+	for k, v := range buf {
+		alreadyHandled := false
+		for _, t := range Config.Collectors.TIE.DataTypes {
+			if t == k {
+				alreadyHandled = true
+				break
+			}
+		}
+		if !alreadyHandled {
+			for _, val := range v {
+				if Config.Collectors.TIE.Limit.Total == 0 || i < Config.Collectors.TIE.Limit.Total {
+					outChan <- val
+					i++
+				} else {
+					break
+				}
+			}
+		}
+	}
+	return iocCount, i, nil
 }
 
 func (m *TIECollector) Name() string {
@@ -196,8 +235,8 @@ func (m *TIECollector) Configure() error {
 	return nil
 }
 
-func (m *TIECollector) Fetch(out chan IOC) (uint64, error) {
+func (m *TIECollector) Fetch(out chan IOC) (uint64, uint64, error) {
 	log.Debug(Config)
-	cnt, err := m.getIOCForQuery(queryAllTIE, out)
-	return cnt, err
+	cnt, sent, err := m.getIOCForQuery(queryAllTIE, out)
+	return cnt, sent, err
 }

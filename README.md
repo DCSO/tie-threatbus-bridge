@@ -69,6 +69,11 @@ collectors:
       from: 1
       to: 5
     chunk-size: 100
+    # Maximum limit for returned IoCs, which will be returned sorted by
+    # data types, in the order specified in the "data-types" config field above
+    # Set to 0 to disable limiting.
+    limit:
+      total: 1000
 
 # Threat Bus ZeroMQ connection settings
 # -------------------------------------

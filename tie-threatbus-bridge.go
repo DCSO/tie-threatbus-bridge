@@ -1,5 +1,5 @@
 // tie-threatbus-bridge
-// Copyright (c) 2020, 2021 DCSO GmbH
+// Copyright (c) 2020, 2023 DCSO GmbH
 
 package main
 
@@ -30,13 +30,14 @@ func update(iocChan chan IOC) {
 	log.WithFields(log.Fields{
 		"domain": "status",
 	}).Info("update started")
-	count, err := tc.Fetch(iocChan)
+	count, sent, err := tc.Fetch(iocChan)
 	if err != nil {
 		log.Error(err)
 	}
 	log.WithFields(log.Fields{
 		"domain":         "metrics",
 		"iocs-processed": count,
+		"iocs-sent":      sent,
 	}).Info("update done")
 }
 
