@@ -6,23 +6,29 @@ on:
   pull_request:
     branches: [ main ]
 
-jobs:
+env:
+    GOPROXY: direct
+    GOVCS: private:all,public:all
+    CGO_ENABLED: 1
 
+jobs:
   build:
     runs-on: ubuntu-latest
+    container:
+        debian:buster
     steps:
     - uses: actions/checkout@v2
 
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
-        go-version: 1.15
+        go-version: '1.20'
 
     - name: Get dependencies
       run: |
-        go get -v -t -d ./...
-        sudo apt-get install -y libzmq3-dev
-
+        apt-get update
+        apt-get install -y git build-essential pkg-config bzr libzmq3-dev
+        go get -v -t ./...
         if [ -f Gopkg.toml ]; then
             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
             dep ensure
