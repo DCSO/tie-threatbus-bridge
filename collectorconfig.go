@@ -1,3 +1,6 @@
+// tie-threatbus-bridge
+// Copyright (c) 2020, 2023, DCSO GmbH
+
 package main
 
 type GlobalConfig struct {
@@ -11,7 +14,7 @@ type GlobalConfig struct {
 var Config GlobalConfig
 
 type Collector interface {
-	Fetch(chan IOC) (uint64, error)
+	Fetch(chan IOC) (uint64, uint64, error)
 	Configure() error
 	Name() string
 }
